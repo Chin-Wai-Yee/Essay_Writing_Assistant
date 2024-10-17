@@ -1,6 +1,3 @@
-from PIL import Image
-import docx2txt
-import PyPDF2
 import streamlit as st
 import google.generativeai as genai
 
@@ -9,6 +6,7 @@ st.set_page_config(page_title="User Analysis", page_icon="🔍")
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_genai_connection
+from File_handling import read_file_content
 
 st.write("# Welcome to the Essay Assistant! 🔍")
 
@@ -24,6 +22,7 @@ st.markdown(
 """
 )
 
+get_genai_connection()
 model = genai.GenerativeModel("gemini-1.5-flash",
                             system_instruction="""
 You are a teahcer who are able to help learners to succeed in the essay writing especially in English Language.
@@ -41,28 +40,6 @@ def get_user_analysis(files):
 
     return response.text
 
-def read_file_content(uploaded_file):
-    file_type = uploaded_file.name.split('.')[-1].lower()
-    
-    if file_type in ['jpg', 'jpeg', 'png']:
-        return Image.open(uploaded_file), file_type
-    
-    elif file_type == 'txt':
-        return uploaded_file.getvalue().decode('utf-8'), file_type
-    
-    elif file_type in ['doc', 'docx']:
-        return docx2txt.process(uploaded_file), file_type
-    
-    elif file_type == 'pdf':
-        pdf_reader = PyPDF2.PdfReader(uploaded_file)
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text() + "\n"
-        return text, file_type
-    
-    else:
-        return "Unsupported file type", "unsupported"
-
 uploaded_files = st.file_uploader(
     "Choose your files",
     type=["jpg", "jpeg", "png", "txt", "doc", "docx", "pdf"],
@@ -76,6 +53,9 @@ if uploaded_files is not None and st.button("Analyze"):
         file_content, file_type = read_file_content(file)
         if file_type != "unsupported":
             files.append(file_content)
+        else:
+            st.error(f"Unsupported file type: {file.name}")
+
     with st.spinner("Analyzing..."):
         response = get_user_analysis(files)
 
