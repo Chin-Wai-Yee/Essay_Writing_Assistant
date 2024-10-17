@@ -2,35 +2,39 @@ import streamlit as st
 
 st.set_page_config(page_title="Essay Writing Chat", page_icon="💬")
 
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from Connection import get_openai_connection
+
 st.write("# Essay Writing Chat 💬")
 
-# Initialize chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+if "openai_model" not in st.session_state:
+    st.session_state["openai_model"] = "gpt-3.5-turbo"
 
-# Display chat messages from history on app rerun
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {"role": "system", "content": "You echo my words~"}
+    ]
+
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# React to user input
-if prompt := st.chat_input("What would you like help with in your essay?"):
-    # Display user message in chat message container
-    st.chat_message("user").markdown(prompt)
-    # Add user message to chat history
+client = get_openai_connection()
+
+if prompt := st.chat_input("What is up?"):
     st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-    # Here you would typically use an AI model or API to generate responses
-    # For this example, we'll just provide some generic responses
-    response = "Here are some suggestions for your essay:\n\n" \
-               "1. Make sure your thesis statement is clear and concise.\n" \
-               "2. Use topic sentences to introduce each paragraph.\n" \
-               "3. Provide evidence to support your arguments.\n" \
-               "4. Use transitional phrases to connect your ideas.\n" \
-               "5. Proofread your essay for grammar and spelling errors."
-
-    # Display assistant response in chat message container
     with st.chat_message("assistant"):
-        st.markdown(response)
-    # Add assistant response to chat history
+        stream = client.chat.completions.create(
+            model=st.session_state["openai_model"],
+            messages=[
+                {"role": m["role"], "content": m["content"]}
+                for m in st.session_state.messages if m["role"] != "system"
+            ],
+            stream=True,
+        )
+        response = st.write_stream(stream)
     st.session_state.messages.append({"role": "assistant", "content": response})
