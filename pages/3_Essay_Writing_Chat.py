@@ -17,7 +17,9 @@ if "messages" not in st.session_state:
             asked some question related to essay writing. 
             Answer the question that related to essay writing.
             If the question is not related to essay writing, answer with "Sorry, I can  
-            only answer the question related to essay writing. Please ask again."."""},
+            only answer the question related to essay writing. Please ask again."
+            you can generate the sample of the essay type or the essay based on the structure given if you have been told to do so
+         ."""},
         {"role": "assistant", "content": "Hello! I'm here to help you with your essay. What would you like to know?"}
     ]
 
