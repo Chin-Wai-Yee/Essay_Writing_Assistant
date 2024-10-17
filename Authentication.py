@@ -1,26 +1,24 @@
 import streamlit as st
-import pymongo
 import bcrypt
-from pymongo import MongoClient
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 import os
 import json
+from Connection import get_collection
 
 # Initialize MongoDB connection
-client = MongoClient("mongodb://localhost:27017/")
-db = client["user_auth_db"]
-users_collection = db["users"]
+users_collection = get_collection("users")
 
 # Google OAuth2 settings
+redirect_uri = "https://improved-space-carnival-r95pg9676rv2pjrv-8501.app.github.dev"
 CLIENT_CONFIG = {
     "web": {
         "client_id": os.environ["GOOGLE_CLIENT_ID"],
         "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": ["https://fictional-space-sniffle-j6pq567r49q2pgg7-8501.app.github.dev"],
+        "redirect_uris": [redirect_uri],
     }
 }
 
@@ -31,7 +29,7 @@ def main():
     st.title("User Authentication App")
     
     # Create tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Register", "Login", "Guest", "Google Sign-In"])
+    tab1, tab2, tab3 = st.tabs(["Register", "Login", "Guest", "Google Sign-In"])
     
     with tab1:
         st.header("Register")
@@ -48,12 +46,6 @@ def main():
             login_user(login_username, login_password)
     
     with tab3:
-        st.header("Guest")
-        if st.button("Enter as Guest"):
-            st.success("Welcome, Guest!")
-            st.write("You have limited access as a guest.")
-    
-    with tab4:
         st.header("Google Sign-In")
         if st.button("Sign in with Google"):
             google_sign_in()
@@ -79,7 +71,7 @@ def google_sign_in():
         client_config=CLIENT_CONFIG,
         scopes=SCOPES
     )
-    flow.redirect_uri = "https://fictional-space-sniffle-j6pq567r49q2pgg7-8501.app.github.dev"
+    flow.redirect_uri = redirect_uri
 
     authorization_url, _ = flow.authorization_url(prompt="consent")
 
