@@ -1,11 +1,11 @@
-import streamlit as st
 import bcrypt
+import sys, os
+import streamlit as st
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from bson import ObjectId
 
-import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_collection
 from Authentication import generate_jwt, verify_jwt_token, logout
@@ -77,10 +77,11 @@ def register_user(username, email, password):
         st.success("Registration successful! You can now log in.")
 
 def login_user(username, password):
-    user = users_collection.find_one({"username": username})
+    user = users_collection.find_one({'username': username})
     if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
         user_id = str(user['_id'])
-        st.session_state["jwt_token"] = generate_jwt(user_id)
+        st.session_state['jwt_token'] = generate_jwt(user_id, username)
+        st.session_state['user'] = user
         st.rerun()
     else:
         st.error("Invalid username or password. Please try again.")
@@ -106,17 +107,22 @@ def google_sign_in():
 def get_user(_user_id):
     return users_collection.find_one({"_id": _user_id})
 
-def user_info(user_id):
+def user_profile(user_id):
+
+    _user_id = ObjectId(user_id)
+
+    if "user" not in st.session_state:
+        st.session_state.user = user
+    else:
+        user = get_user(_user_id)
+
+    # st.write(f"User ID: {user['_id']}")
+    st.write(f"Hi, {user['username']}")
+    st.image(user['picture'], width=100)
+    st.write(f"Email: {user['email']}")
 
     if st.button("Logout"):
         logout()
-
-    _user_id = ObjectId(user_id)
-    user = get_user(_user_id)
-    st.write(f"User ID: {user['_id']}")
-    st.write(f"Username: {user['username']}")
-    st.write(f"Email: {user['email']}")
-    st.image(user['picture'], width=100)
 
 st.title("User Authentication System")
 if "jwt_token" not in st.session_state:
@@ -124,7 +130,7 @@ if "jwt_token" not in st.session_state:
 else:
     user_id = verify_jwt_token(st.session_state["jwt_token"])
     if user_id:
-        user_info(user_id)
+        user_profile(user_id)
     else:
         del st.session_state["jwt_token"]
         st.experimental_rerun()

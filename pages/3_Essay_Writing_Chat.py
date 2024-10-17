@@ -1,8 +1,9 @@
+import os
+import sys
 import streamlit as st
 
 st.set_page_config(page_title="Essay Writing Chat", page_icon="💬")
 
-import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_openai_connection
 
@@ -12,20 +13,32 @@ if "openai_model" not in st.session_state:
     st.session_state["openai_model"] = "gpt-3.5-turbo"
 
 if "messages" not in st.session_state:
+    system_prompt = (
+        "You are an essay teacher and will be answering "
+        "only question that related to essay writing. "
+        "You can write a sample essay based on a type or any topic "
+        "or based a given structure. "
+        "If a question is not related to essay writing, "
+        "do not answer it and provide your reasons."
+    )
+    if "user_info" in st.session_state:
+        system_prompt += "\nFollowing is some info about your student:\n"
+        system_prompt += "\n".join(
+            f"- {k}: {v}" for k, v in st.session_state.user_info.items()
+        )
     st.session_state.messages = [
-        {"role": "system", "content": """"You are an essay teacher and will be 
-            asked some question related to essay writing. 
-            Answer the question that related to essay writing.
-            If the question is not related to essay writing, answer with "Sorry, I can  
-            only answer the question related to essay writing. Please ask again."
-            you can generate the sample of the essay type or the essay based on the structure given if you have been told to do so
-         ."""},
-        {"role": "assistant", "content": "Hello! I'm here to help you with your essay. What would you like to know?"}
+        {
+            "role": "system",
+            "content": system_prompt,
+        },
+        {
+            "role": "assistant",
+            "content": "Hello, I am your essay teacher, "
+            "how can I help you?",
+        }
     ]
 
-for message in st.session_state.messages:
-    if message["role"] == "system":
-        continue
+for message in st.session_state.messages[1:]:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
@@ -46,4 +59,6 @@ if prompt := st.chat_input("What is up?"):
             stream=True,
         )
         response = st.write_stream(stream)
-    st.session_state.messages.append({"role": "assistant", "content": response})
+    st.session_state.messages.append(
+        {"role": "assistant", "content": response}
+    )
