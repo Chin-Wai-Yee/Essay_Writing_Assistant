@@ -4,11 +4,12 @@ import datetime
 
 SECRET_KEY = st.secrets["JWT_SECRET_KEY"]
 
-def generate_jwt(user_id):
+def generate_jwt(user_id, username):
     """Generate a JWT token."""
     payload = {
         "user_id": user_id,
-        "exp": datetime.datetime.now() + datetime.timedelta(hours=1)  # Token expires in 1 hour
+        "username": username,
+        "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(hours=1)  # Token expires in 1 hour
     }
     token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
     return token
@@ -29,18 +30,21 @@ def logout():
     del st.session_state["jwt_token"]
     st.rerun()
 
-def login_required(login_page):
-    def wrapper(protected_page):
+def login_required(protected_page):
+    def wrapper():
         if "jwt_token" not in st.session_state:
-            login_page()
-            return
+            st.error("You need to login to view this page")
+            if st.button("Login/Register"):
+                st.switch_page("pages/5_Profile.py")
+
+            st.stop()
 
         user_id = verify_jwt_token(st.session_state["jwt_token"])
         if user_id:
             protected_page()
         else:
             del st.session_state["jwt_token"]
-            st.experimental_rerun()
+            st.rerun()
     return wrapper
 
 def home_page():

@@ -1,107 +1,123 @@
 import streamlit as st
-import plotly.graph_objects as go
 import pandas as pd
-from datetime import datetime, timedelta
+import plotly.express as px
+import matplotlib.pyplot as plt
 
 st.set_page_config(page_title="Performance", page_icon="📊")
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_collection
+from Authentication import login_required
 
 st.write("# Performance 📊")
 
-# Function to generate sample data (replace this with actual data retrieval)
-def get_sample_data():
-    dates = [datetime.now() - timedelta(days=x) for x in range(30, 0, -1)]
-    scores = [75 + i % 10 for i in range(30)]  # Scores between 75 and 84
-    return pd.DataFrame({'Date': dates, 'Score': scores})
+def display_suggestion(suggestions):
 
-# Get the data
-df = get_sample_data()
+    # Display essay type
+    st.header("Essay Type")
+    st.write(suggestions["essay_score"]["type_of_essay"])
 
-# Create the graph
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=df['Date'], y=df['Score'], mode='lines+markers'))
-fig.update_layout(
-    title='Essay Performance Over Time',
-    xaxis_title='Date',
-    yaxis_title='Essay Score',
-    yaxis_range=[0, 100]
-)
+    scores = suggestions['essay_score']['scores']
+    scores_df = pd.DataFrame(list(scores.items()), columns=['Category', 'Score'])
+    # Prepare data for the histogram
+    scores_df['Category'] = scores_df['Category'].map(lambda x: x.replace('_', ' ').title())
 
-# Display the graph
-st.plotly_chart(fig)
+    fig = px.bar(scores_df, y='Category', x='Score', color='Score',
+             labels={'Score': 'Scores', 'Category': 'Score Categories'},
+             title='Essay Evaluation Scores',
+             text='Score')
 
-# Allow user to view past reports
-st.write("## Past Performance Reports")
+    fig.update_layout(showlegend=False)
+    fig.update_layout(xaxis=dict(range=[0, 10]))
 
-# Simulating past reports (replace this with actual report retrieval)
-past_reports = {
-    "May 2023": "Your essays showed significant improvement in structure and argumentation.",
-    "June 2023": "Grammar and vocabulary usage have enhanced, but thesis statements need more clarity.",
-    "July 2023": "Excellent progress in developing complex ideas. Focus on improving conclusions."
-}
+    st.header("Scores")
+    # Show the figure in Streamlit
+    st.plotly_chart(fig)
 
-selected_report = st.selectbox("Select a report to view", list(past_reports.keys()))
+    # Display scores
+    scores_df["Score"] = scores_df["Score"].map("{}/10".format)
+    st.dataframe(scores_df, use_container_width=True, hide_index=True)
 
-if selected_report:
-    st.write(f"### Report for {selected_report}")
-    st.write(past_reports[selected_report])
+    # Display suggestions
+    st.header("Suggestions")
+    for s in suggestions["essay_score"]["essay_suggestion"]:
+        with st.expander(f"Section {s['section']}"):
+            st.subheader("Original Text")
+            st.write(s["original_text"])
+            st.subheader("Suggestion")
+            st.write(s["suggestion"])
+            st.subheader("Improved Version")
+            st.write(s["improved_version"])
 
-# Provide an option to download the full report (simulated)
-if st.button("Download Full Report"):
-    # In a real application, you would generate and provide a downloadable report here
-    st.write("Downloading full report... (This is a placeholder for the actual download functionality)")
+def display_user_analysis(user_analysis):
+    # Display writing style and role
+    st.header("Writing Style and Role")
+    st.write(f"**Role:** {user_analysis['game_like_role']}")
+    st.write(f"**Writing Style:** {user_analysis['writing_style']}")
 
-# Add a section for setting goals
-st.write("## Set Performance Goals")
-goal_score = st.slider("Set your target essay score", min_value=0, max_value=100, value=85)
-st.write(f"Your current goal: Achieve a consistent essay score of {goal_score} or higher.")
+    # Display strengths
+    st.header("Strengths")
+    for strength in user_analysis["strengths"]:
+        st.write(f"- {strength}")
 
-# Provide personalized recommendations based on the current performance
-average_score = df['Score'].mean()
-if average_score < goal_score:
-    st.write(f"To reach your goal of {goal_score}, consider focusing on:")
-    st.write("- Improving essay structure and organization")
-    st.write("- Enhancing vocabulary and language use")
-    st.write("- Strengthening your argumentation and evidence")
-else:
-    st.write("Great job! You're consistently meeting or exceeding your goal. Consider setting a higher target to continue improving.")
+    # Display weaknesses
+    st.header("Weaknesses")
+    for weakness in user_analysis["weaknesses"]:
+        st.write(f"- {weakness}")
+
+    # Create a pie chart for strengths and weaknesses
+    categories = ['Strengths', 'Weaknesses']
+    values = [len(user_analysis["strengths"]), len(user_analysis["weaknesses"])]
+
+    plt.figure(figsize=(4, 4))  # Adjust the size to be smaller
+    plt.pie(values, labels=categories, autopct='%1.1f%%', startangle=90, colors=['lightgreen', 'salmon'])
+    plt.title('Strengths vs. Weaknesses')
+
+    st.pyplot(plt)
 
 # Function to retrieve past performance
-def get_past_performance(user_id):
-    return list(get_collection("user_performance").find({"user_id": user_id}))
+def get_past_performance(username):
+    return list(get_collection("user_performance").find({"username": username}).sort("timestamp", -1))
 
 # Function to retrieve latest user analysis
-def get_user_analysis(user_id):
-    return get_collection("user_analysis").find_one({"user_id": user_id})
+def get_user_analysis(username):
+    return get_collection("user_analysis").find_one({"username": username}, sort=[( '_id', -1 )])
 
-# Display past performance and analysis
-user_id = st.text_input("Enter your user ID")
-if st.button("View Past Performance"):
-    if user_id:
-        with st.spinner("Loading data..."):
-            past_performance = get_past_performance(user_id)
-            user_analysis = get_user_analysis(user_id)
-        
-        if past_performance:
-            st.write("Past Performance:")
-            for performance in past_performance:
-                st.write(f"Date: {performance['timestamp']}")
-                st.write(f"Score: {performance['score']}")
-                st.write(f"Comments: {performance['comments']}")
-                st.write("---")
-        else:
-            st.write("No past performance data found.")
-        
+@login_required
+def main():
+
+    tab1, tab2 = st.tabs(["User Analysis", "Past Performance"])
+
+    # Display past performance and analysis
+    username = st.session_state["user"]["username"]
+    # Filter entries for the selected username
+    past_performance = get_past_performance(username)
+    user_analysis = get_user_analysis(username)
+
+    # Select a specific entry based on timestamp
+    with tab1:
         if user_analysis:
-            st.write("User Writing Style Analysis:")
-            st.write(f"Style: {user_analysis['writing_style']['style']}")
-            st.write(f"Vocabulary Level: {user_analysis['writing_style']['vocabulary_level']}")
-            st.write(f"Sentence Complexity: {user_analysis['writing_style']['sentence_complexity']}")
-            st.write(f"Common Themes: {', '.join(user_analysis['writing_style']['common_themes'])}")
+            st.write("### Latest User Analysis")
+            display_user_analysis(user_analysis['user_info'])
         else:
-            st.write("No user analysis data found.")
-    else:
-        st.error("Please enter a user ID.")
+            st.write("No user analysis available.")
+            if st.button("Go to User Analysis"):
+                st.switch_page("1_User Analysis.py")
+
+    with tab2:
+        if past_performance:
+            selected_entry_index = st.selectbox(
+                "Select an entry",
+                [f"{i+1} - {past_performance[i]['timestamp']}" for i in range(len(past_performance))],
+            )
+            index = int(selected_entry_index.split(" - ")[0]) - 1
+            selected_entry = past_performance[index]
+            st.write("### Selected Entry")
+            display_suggestion(selected_entry["suggestions"])
+        else:
+            st.write("No past performance available.")
+            if st.button("Go to Essay Suggestion"):
+                st.switch_page("2_Essay_Suggestion.py")
+
+main()
