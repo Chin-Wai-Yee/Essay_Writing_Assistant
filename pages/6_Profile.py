@@ -14,11 +14,12 @@ from Authentication import generate_jwt, verify_jwt_token, logout
 users_collection = get_collection("users")
 
 # Google OAuth2 settings
-redirect_uri = "https://your_redirect_uri"
+redirect_uri = st.secrets["URL"] if "URL" in st.secrets else "http://localhost:8501"
+
 CLIENT_CONFIG = {
     "web": {
-        "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
+        "client_id": st.secrets["GOOGLE_CLIENT_ID"],
+        "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
         "token_uri": "https://oauth2.googleapis.com/token",
         "redirect_uris": [redirect_uri],
@@ -89,19 +90,35 @@ def login_user(username, password):
 def google_sign_in():
     flow = Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
     flow.redirect_uri = redirect_uri
-    authorization_url, _ = flow.authorization_url(prompt="consent")
-    st.warning("This feature is under development. Please use the Register and Login tabs.")
-    st.link_button("Login with Google", authorization_url)
 
-    if 'code' in st.query_params:
-        code = st.query_params['code'][0]
+    if 'code' not in st.query_params:
+        authorization_url, _ = flow.authorization_url(prompt="consent")
+        st.link_button("Login with Google", authorization_url)
+    else:
+        code = st.query_params['code']
         flow.fetch_token(code=code)
         credentials = flow.credentials
         user_info_service = build('oauth2', 'v2', credentials=credentials)
         user_info = user_info_service.userinfo().get().execute()
-        users_collection.update_one({"email": user_info['email']}, {"$set": {"name": user_info['name'], "picture": user_info['picture'], "google_id": user_info['id']}}, upsert=True)
-        st.success(f"Welcome, {user_info['name']}!")
-        st.image(user_info['picture'], width=100)
+
+        # Update or insert user in MongoDB
+        user_data = {
+            "email": user_info['email'],
+            "username": user_info['name'],
+            "picture": user_info['picture'],
+            "google_id": user_info['id']
+        }
+        users_collection.update_one(
+            {"email": user_info['email']},
+            {"$set": user_data},
+            upsert=True
+        )
+
+        # Add user to session state
+        user = users_collection.find_one({'username': user_info['name']})
+        st.session_state['user'] = user
+
+        st.rerun()
 
 @st.cache_data(ttl=600)
 def get_user(_user_id):
