@@ -1,13 +1,16 @@
 import streamlit as st
 import pymongo
-from datetime import datetime
-import uuid
-import os
+from openai import OpenAI
+import google.generativeai as genai
+
+MONGODB_URI = st.secrets["MONGODB_URI"]
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+GEMINIKEY = st.secrets["GOOGLE_API_KEY"]
 
 # MongoDB connection (replace with your actual connection string)
 @st.cache_resource
 def init_connection():
-    return pymongo.MongoClient(os.environ["MONGODB_URI"])
+    return pymongo.MongoClient(MONGODB_URI)
 
 def get_db():
     client = init_connection()
@@ -16,6 +19,14 @@ def get_db():
 def get_collection(collection_name):
     db = get_db()
     return db[collection_name]
+
+@st.cache_resource
+def get_openai_connection():
+    client = OpenAI(api_key = OPENAI_API_KEY)
+    return client
+
+def get_genai_connection():
+    genai.configure(api_key = GEMINIKEY)
 
 # # Function to analyze essay and return results (placeholder)
 # def analyze_essay(essay_text):
