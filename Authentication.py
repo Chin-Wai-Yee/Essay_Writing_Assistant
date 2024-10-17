@@ -35,7 +35,7 @@ def login_required(protected_page):
         if "jwt_token" not in st.session_state:
             st.error("You need to login to view this page")
             if st.button("Login/Register"):
-                st.switch_page("pages/5_Profile.py")
+                st.switch_page("pages/6_Profile.py")
 
             st.stop()
 
