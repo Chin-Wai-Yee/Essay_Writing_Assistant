@@ -1,22 +1,25 @@
+import sys
+from File_handling import read_file_content
+from Connection import get_openai_connection
 from openai import OpenAI
 import streamlit as st
 import os
 
 st.set_page_config(page_title="Essay Suggestion", page_icon="💡")
 
-import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from Connection import get_openai_connection
 
 st.write("# Get Essay Suggestions 💡")
 
-uploaded_file = st.file_uploader("Upload your essay", type=["txt", "doc", "docx", "pdf"])
+uploaded_file = st.file_uploader("Upload your essay", type=[
+                                 "txt", "doc", "docx", "pdf"])
+
 
 def get_essay_suggestions(essay, userinfo):
-  
-  client = get_openai_connection()
 
-  system_prompt =""" You will be given an essay and the weaknesses and strengths of a student
+    client = get_openai_connection()
+
+    system_prompt = """ You will be given an essay and the weaknesses and strengths of a student
                       in writting an essay. Provide the score of the essay. Then give some
                       suggestion or improvement on the essay based on the weaknesses and
                       strengths of the student. You can change some word or sentence of the
@@ -47,17 +50,17 @@ def get_essay_suggestions(essay, userinfo):
                       Improved Version:
                       """
 
-  sample_essay = """
+    sample_essay = """
   Having a healthy lifestyle is all about choosing to live your life in the most healthy way possible. There are a few things you have to do to start living your life in this way, i.e., the healthy way. This means doing some amount of exercise daily, such as jogging, yoga, playing sports, etc. Adding to this, you must also have a balanced and nutritional diet with all the food groups. It would be best if you were taking the right amount of proteins, carbohydrates, vitamins, minerals, and fats to help you have a proper diet. Grouped with these two essential aspects (diet and exercise), a healthy person also maintains the same sleep cycle, which should consist of around 7-8 hours of sleep.
 However, we must remember that a healthy lifestyle not only refers to our physical and mental health. Maintaining a balanced diet, exercising daily, and sleeping well are essential parts of a healthy lifestyle. But feeling happy is also a big part of a healthy lifestyle. To enable happiness, thinking positively is a must. When a person does not feel happy or good about themselves, they are not entirely healthy. Thus we must do our best to think positively so that we can feel happy rather than sad.
 We have talked about what all entails a healthy life, so now we must speak of what all does not. There are several things that one must avoid in order to live a healthy lifestyle. These include the kind of practices and habits that are harmful to us and also to the people around us, i.e., society. Such practices and habits include gambling, smoking, drinking, illegal drugs, or any other things that can turn into an addiction. These habits are harmful to not only you but for all the people around you, as addiction causes unhealthy attitudes and behaviors. Other unhealthy practices include skipping meals and eating junk food.
 The benefits of a healthy lifestyle are manifold: living a healthy life allows you to live longer, which means that you get to spend more time with your family. Exercising daily will enable you to release endorphins and helps you feel happier. Regular exercise also improves the health of your skin and hair, bettering your appearance as well. Healthy lifestyles also primarily reduce your risk of life-threatening diseases such as cancer, diabetes, etc. and also reduce your susceptibility to cardiac arrests.
 Overall, living your life in a healthy way only has benefits, and that’s why it is recommended that you do everything you can to have a healthy lifestyle. So, eat three nutritional meals a day, avoid unhealthy junk food, go for a run or jog in the morning, get your full 8 hours of sleep, and avoid bad habits like drugs, alcohol, and smoking. A healthy lifestyle is the best thing that you can do to your body, and you will be thanking yourself for following a healthy lifestyle in the later years of your life.
 """
-  sample_userinfo = """
+    sample_userinfo = """
 Strengths : Clear Message, Well-Organized, Comprehensive Content, Encouraging Tone, Use of Specific Examples. Weaknesses : Repetition, Vague Assertions, Lack of Evidence, Generalized Conclusion, Sentence Structure, Transitions and Flow.
 """
-  sample_answer = """
+    sample_answer = """
 Based on the strengths and weaknesses of the essay, I would score it in different categories as follows:
 
 Content: 7/10
@@ -111,29 +114,35 @@ Suggestion: This claim would benefit from being backed by evidence, such as a re
 Improved Version:
 "Regular exercise is known to boost circulation and promote skin health, which can contribute to a healthier appearance."
 """
-  response = client.chat.completions.create(
-    model="gpt-3.5-turbo",
-    messages=[
-      {"role": "system", "content": system_prompt},
-      {"role": "user", "content": f"Essay: {sample_essay}\nUserInfo: {sample_userinfo}\n\nPlease provide specific suggestions on how to improve the essay based on the provided user information."},
-      {"role": "assistant", "content": sample_answer},
-      {"role": "user", "content": f"Essay: {essay}\nUserInfo: {userinfo}\n\nPlease provide specific suggestions on how to improve the essay based on the provided user information."}
-    ]
-  )
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"Essay: {sample_essay}\nUserInfo: {sample_userinfo}\n\nPlease provide specific suggestions on how to improve the essay based on the provided user information."},
+            {"role": "assistant", "content": sample_answer},
+            {"role": "user", "content": f"Essay: {essay}\nUserInfo: {userinfo}\n\nPlease provide specific suggestions on how to improve the essay based on the provided user information."}
+        ]
+    )
 
-  return response.choices[0].message.content
+    return response.choices[0].message.content
+
 
 if uploaded_file:
-    essay_content = uploaded_file.read().decode()
-    st.write("Uploaded Essay:")
-    st.write(essay_content)
-    
+    essay_content, file_type = read_file_content(uploaded_file)
+    if file_type == "unsupported":
+        st.write("Unsupported file type")
+        st.stop()
+
+    with st.expander("Uploaded Essay:"):
+        st.markdown(essay_content)
+
     if st.button("Get Suggestions"):
         # Here you would typically use an AI model or API to generate suggestions
         # For this example, we'll just provide some generic feedback
         suggestions = ""
         with st.spinner("Generating suggestions..."):
-            suggestions = get_essay_suggestions(essay_content, "Wring style: Analytical, Vocabulary level: Advanced, Sentence complexity: Moderate, Common themes: Technology, Social issues")
-        
+            suggestions = get_essay_suggestions(
+                essay_content, "Wring style: Analytical, Vocabulary level: Advanced, Sentence complexity: Moderate, Common themes: Technology, Social issues")
+
         st.write("Suggestions:")
         st.markdown(suggestions)
