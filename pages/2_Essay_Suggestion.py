@@ -11,6 +11,7 @@ from File_handling import read_file_content
 st.set_page_config(page_title="Essay Suggestion", page_icon="💡")
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_openai_connection, get_collection
+from Data_Visualization import display_suggestion
 
 st.write("# Get Essay Suggestions 💡")
 
@@ -157,44 +158,6 @@ Overall, living your life in a healthy way only has benefits, and that’s why i
 def add_to_collection(data):
     collection = get_collection("user_performance")
     collection.insert_one(data)
-
-def display_suggestion(suggestions):
-
-    # Display essay type
-    st.header("Essay Type")
-    st.write(suggestions["essay_score"]["type_of_essay"])
-
-    scores = suggestions['essay_score']['scores']
-    scores_df = pd.DataFrame(list(scores.items()), columns=['Category', 'Score'])
-    # Prepare data for the histogram
-    scores_df['Category'] = scores_df['Category'].map(lambda x: x.replace('_', ' ').title())
-
-    fig = px.bar(scores_df, y='Category', x='Score', color='Score',
-             labels={'Score': 'Scores', 'Category': 'Score Categories'},
-             title='Essay Evaluation Scores',
-             text='Score')
-
-    fig.update_layout(showlegend=False)
-    fig.update_layout(xaxis=dict(range=[0, 10]))
-
-    st.header("Scores")
-    # Show the figure in Streamlit
-    st.plotly_chart(fig)
-
-    # Display scores
-    scores_df["Score"] = scores_df["Score"].map("{}/10".format)
-    st.dataframe(scores_df, use_container_width=True, hide_index=True)
-
-    # Display suggestions
-    st.header("Suggestions")
-    for s in suggestions["essay_score"]["essay_suggestion"]:
-        with st.expander(f"Section {s['section']}"):
-            st.subheader("Original Text")
-            st.write(s["original_text"])
-            st.subheader("Suggestion")
-            st.write(s["suggestion"])
-            st.subheader("Improved Version")
-            st.write(s["improved_version"])
 
 uploaded_file = st.file_uploader(
     "Upload your essay",
