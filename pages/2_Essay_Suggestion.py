@@ -1,6 +1,7 @@
 from File_handling import read_file_content
 import streamlit as st
 import os
+from datetime import datetime
 
 st.set_page_config(page_title="Essay Suggestion", page_icon="💡")
 
@@ -149,3 +150,11 @@ if uploaded_file:
 
         st.write("Suggestions:")
         st.markdown(suggestions)
+        data = {
+            "timestamp": datetime.now(),
+            "user_id": "2103370",
+            "comments": suggestions,
+            "score": 7,
+        }
+
+        add_to_collection(data)

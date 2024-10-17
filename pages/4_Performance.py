@@ -81,8 +81,9 @@ def get_user_analysis(user_id):
 user_id = st.text_input("Enter your user ID")
 if st.button("View Past Performance"):
     if user_id:
-        past_performance = get_past_performance(user_id)
-        user_analysis = get_user_analysis(user_id)
+        with st.spinner("Loading data..."):
+            past_performance = get_past_performance(user_id)
+            user_analysis = get_user_analysis(user_id)
         
         if past_performance:
             st.write("Past Performance:")
