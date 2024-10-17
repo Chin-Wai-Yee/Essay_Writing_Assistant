@@ -17,7 +17,7 @@ if "messages" not in st.session_state:
     ]
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    with st.chat_message(message["role"]) and message["role"] != "system":
         st.markdown(message["content"])
 
 client = get_openai_connection()
@@ -32,7 +32,7 @@ if prompt := st.chat_input("What is up?"):
             model=st.session_state["openai_model"],
             messages=[
                 {"role": m["role"], "content": m["content"]}
-                for m in st.session_state.messages if m["role"] != "system"
+                for m in st.session_state.messages
             ],
             stream=True,
         )
