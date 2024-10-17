@@ -11,6 +11,7 @@ st.set_page_config(page_title="User Analysis", page_icon="🔍")
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_collection, get_genai_connection
+from Data_Visualization import display_user_analysis
 
 st.write("# Welcome to the User Analysis! 🔍")
 
@@ -51,32 +52,6 @@ Example:
 def get_user_analysis(files):
     response = model.generate_content(files)
     return response.text
-
-def display_user_analysis(user_analysis):
-    # Display writing style and role
-    st.header("Writing Style and Role")
-    st.write(f"**Role:** {user_analysis['game_like_role']}")
-    st.write(f"**Writing Style:** {user_analysis['writing_style']}")
-
-    # Display strengths
-    st.header("Strengths")
-    for strength in user_analysis["strengths"]:
-        st.write(f"- {strength}")
-
-    # Display weaknesses
-    st.header("Weaknesses")
-    for weakness in user_analysis["weaknesses"]:
-        st.write(f"- {weakness}")
-
-    # Create a pie chart for strengths and weaknesses
-    categories = ['Strengths', 'Weaknesses']
-    values = [len(user_analysis["strengths"]), len(user_analysis["weaknesses"])]
-
-    plt.figure(figsize=(4, 4))  # Adjust the size to be smaller
-    plt.pie(values, labels=categories, autopct='%1.1f%%', startangle=90, colors=['lightgreen', 'salmon'])
-    plt.title('Strengths vs. Weaknesses')
-
-    st.pyplot(plt)
 
 def update_user_info(response):
 

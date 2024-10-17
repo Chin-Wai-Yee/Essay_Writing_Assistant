@@ -9,6 +9,7 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_collection
 from Authentication import login_required
+from Data_Visualization import display_suggestion, display_user_analysis, display_scores_over_time
 
 st.write("# Performance 📊")
 
@@ -87,7 +88,7 @@ def get_user_analysis(username):
 @login_required
 def main():
 
-    tab1, tab2 = st.tabs(["User Analysis", "Past Performance"])
+    tab1, tab2, tab3= st.tabs(["Overall Performance", "User Analysis", "Past Performance"])
 
     # Display past performance and analysis
     username = st.session_state["user"]["username"]
@@ -95,8 +96,20 @@ def main():
     past_performance = get_past_performance(username)
     user_analysis = get_user_analysis(username)
 
-    # Select a specific entry based on timestamp
     with tab1:
+        user_entries = get_past_performance(username)
+
+        # Convert to DataFrame for easier manipulation
+        df = pd.DataFrame(user_entries)
+
+        # Ensure timestamp is in datetime format
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+        # Display scores over time
+        display_scores_over_time(df, username)
+
+    # Select a specific entry based on timestamp
+    with tab2:
         if user_analysis:
             st.write("### Latest User Analysis")
             display_user_analysis(user_analysis['user_info'])
@@ -105,7 +118,7 @@ def main():
             if st.button("Go to User Analysis"):
                 st.switch_page("1_User Analysis.py")
 
-    with tab2:
+    with tab3:
         if past_performance:
             selected_entry_index = st.selectbox(
                 "Select an entry",
