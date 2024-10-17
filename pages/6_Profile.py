@@ -25,7 +25,7 @@ CLIENT_CONFIG = {
         "redirect_uris": [redirect_uri],
     }
 }
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
 
 def login_page():
     tab1, tab2, tab3 = st.tabs(["Register", "Login", "Google Sign-In"])
