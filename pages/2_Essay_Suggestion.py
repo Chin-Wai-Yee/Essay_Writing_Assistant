@@ -1,13 +1,12 @@
-import sys
 from File_handling import read_file_content
-from Connection import get_openai_connection
-from openai import OpenAI
 import streamlit as st
 import os
 
 st.set_page_config(page_title="Essay Suggestion", page_icon="💡")
 
+import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from Connection import get_openai_connection, get_collection
 
 st.write("# Get Essay Suggestions 💡")
 
@@ -126,6 +125,10 @@ Improved Version:
 
     return response.choices[0].message.content
 
+# Function to add the reponse to collection
+def add_to_collection(response):
+    collection = get_collection("user_performance")
+    collection.insert_one(response)
 
 if uploaded_file:
     essay_content, file_type = read_file_content(uploaded_file)
