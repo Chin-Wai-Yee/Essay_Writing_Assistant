@@ -1,105 +1,58 @@
 import streamlit as st
-import bcrypt
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import Flow
-from googleapiclient.discovery import build
-import os
-import json
-from Connection import get_collection
+import jwt
+import datetime
 
-# Initialize MongoDB connection
-users_collection = get_collection("users")
+SECRET_KEY = st.secrets["JWT_SECRET_KEY"]
 
-# Google OAuth2 settings
-redirect_uri = "https://improved-space-carnival-r95pg9676rv2pjrv-8501.app.github.dev"
-CLIENT_CONFIG = {
-    "web": {
-        "client_id": os.environ["GOOGLE_CLIENT_ID"],
-        "client_secret": os.environ["GOOGLE_CLIENT_SECRET"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [redirect_uri],
+def generate_jwt(user_id):
+    """Generate a JWT token."""
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.datetime.now() + datetime.timedelta(hours=1)  # Token expires in 1 hour
     }
-}
+    token = jwt.encode(payload, SECRET_KEY, algorithm="HS256")
+    return token
 
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile']
+def verify_jwt_token(token):
+    """Verify a JWT token and return the user ID if valid."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        return payload["user_id"]
+    except jwt.ExpiredSignatureError:
+        st.error("Token has expired. Please log in again.")
+        return None
+    except jwt.InvalidTokenError:
+        st.error("Invalid token. Please log in again.")
+        return None
 
-# Streamlit app
-def main():
-    st.title("User Authentication App")
-    
-    # Create tabs
-    tab1, tab2, tab3 = st.tabs(["Register", "Login", "Guest", "Google Sign-In"])
-    
-    with tab1:
-        st.header("Register")
-        register_username = st.text_input("Username", key="reg_username")
-        register_password = st.text_input("Password", type="password", key="reg_password")
-        if st.button("Register"):
-            register_user(register_username, register_password)
-    
-    with tab2:
-        st.header("Login")
-        login_username = st.text_input("Username", key="login_username")
-        login_password = st.text_input("Password", type="password", key="login_password")
-        if st.button("Login"):
-            login_user(login_username, login_password)
-    
-    with tab3:
-        st.header("Google Sign-In")
-        if st.button("Sign in with Google"):
-            google_sign_in()
+def logout():
+    del st.session_state["jwt_token"]
+    st.rerun()
 
-def register_user(username, password):
-    if users_collection.find_one({"username": username}):
-        st.error("Username already exists. Please choose a different one.")
-    else:
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        users_collection.insert_one({"username": username, "password": hashed_password})
-        st.success("Registration successful! You can now log in.")
+def login_required(login_page):
+    def wrapper(protected_page):
+        if "jwt_token" not in st.session_state:
+            login_page()
+            return
 
-def login_user(username, password):
-    user = users_collection.find_one({"username": username})
-    if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
-        st.success(f"Welcome, {username}!")
-        st.write("You have successfully logged in.")
-    else:
-        st.error("Invalid username or password. Please try again.")
+        user_id = verify_jwt_token(st.session_state["jwt_token"])
+        if user_id:
+            protected_page()
+        else:
+            del st.session_state["jwt_token"]
+            st.experimental_rerun()
+    return wrapper
 
-def google_sign_in():
-    flow = Flow.from_client_config(
-        client_config=CLIENT_CONFIG,
-        scopes=SCOPES
-    )
-    flow.redirect_uri = redirect_uri
+def home_page():
+    st.title("Home")
+    st.write("Welcome to the home page. This page is accessible to all users.")
 
-    authorization_url, _ = flow.authorization_url(prompt="consent")
+# @login_required
+# def protected_page():
+#     st.title("Protected Page")
+#     st.write("This is a protected page. Only logged-in users can see this content.")
 
-    st.markdown(f"[Click here to sign in with Google]({authorization_url})")
-
-    # Check if the user has completed the Google sign-in process
-    if 'code' in st.query_params:
-        code = st.query_params['code'][0]
-        flow.fetch_token(code=code)
-
-        credentials = flow.credentials
-        user_info_service = build('oauth2', 'v2', credentials=credentials)
-        user_info = user_info_service.userinfo().get().execute()
-
-        # Store or update user information in MongoDB
-        users_collection.update_one(
-            {"email": user_info['email']},
-            {"$set": {
-                "name": user_info['name'],
-                "picture": user_info['picture'],
-                "google_id": user_info['id']
-            }},
-            upsert=True
-        )
-
-        st.success(f"Welcome, {user_info['name']}!")
-        st.write("You have successfully signed in with Google.")
-        st.image(user_info['picture'], width=100)
-
-if __name__ == "__main__":
-    main()
+# @login_required
+# def another_protected_page():
+#     st.title("Another Protected Page")
+#     st.write("This is another protected page. It's also only accessible to logged-in users.")
