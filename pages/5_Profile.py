@@ -3,10 +3,12 @@ import bcrypt
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-import os
+from bson import ObjectId
+
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from Connection import get_collection
 from Authentication import generate_jwt, verify_jwt_token, logout
-from bson import ObjectId
 
 # Initialize MongoDB connection
 users_collection = get_collection("users")
