@@ -21,6 +21,6 @@ with col2:
         st.switch_page("pages/3_Essay_Writing_Chat.py")
 
     if st.button("Performance", use_container_width=True):
-        st.switch_page("pages/4_Performance.py")
+        st.switch_page("pages/5_Performance.py")
     
     # Add more buttons here if you have additional pages
