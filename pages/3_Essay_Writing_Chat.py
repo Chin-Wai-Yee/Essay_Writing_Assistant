@@ -17,7 +17,9 @@ if "messages" not in st.session_state:
     ]
 
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]) and message["role"] != "system":
+    if message["role"] == "system":
+        continue
+    with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
 client = get_openai_connection()
