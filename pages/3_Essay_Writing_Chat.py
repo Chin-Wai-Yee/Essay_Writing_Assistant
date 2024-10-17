@@ -13,7 +13,8 @@ if "openai_model" not in st.session_state:
 
 if "messages" not in st.session_state:
     st.session_state.messages = [
-        {"role": "system", "content": "You echo my words but answer true thing if I ask you something about how to write an essay."}
+        {"role": "system", "content": "You echo my words but answer true thing if I ask you something about how to write an essay."},
+        {"role": "assistant", "content": "Hello! I'm here to help you with your essay. What would you like to know?"}
     ]
 
 for message in st.session_state.messages:
