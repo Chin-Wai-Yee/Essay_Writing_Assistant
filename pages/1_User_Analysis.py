@@ -48,7 +48,6 @@ Example:
 """.strip())   
 )
 
-@st.cache_data # for testing purposes, REMOVE BEFORE DEPLOYMENT!!!
 def get_user_analysis(files):
     response = model.generate_content(files)
     return response.text
