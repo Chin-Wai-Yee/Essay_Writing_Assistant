@@ -13,31 +13,14 @@ from Authentication import generate_jwt, verify_jwt_token, logout
 # Initialize MongoDB connection
 users_collection = get_collection("users")
 
-# Google OAuth2 settings
-redirect_uri = st.secrets["URL"] if "URL" in st.secrets else "http://localhost:8501"
-
-CLIENT_CONFIG = {
-    "web": {
-        "client_id": st.secrets["GOOGLE_CLIENT_ID"],
-        "client_secret": st.secrets["GOOGLE_CLIENT_SECRET"],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "redirect_uris": [redirect_uri],
-    }
-}
-SCOPES = ['https://www.googleapis.com/auth/userinfo.email', 'https://www.googleapis.com/auth/userinfo.profile', 'openid']
-
 def login_page():
-    tab1, tab2, tab3 = st.tabs(["Register", "Login", "Google Sign-In"])
+    tab1, tab2 = st.tabs(["Register", "Login"])
 
     with tab1:
         register_tab()
 
     with tab2:
         login_tab()
-
-    with tab3:
-        google_sign_in_tab()
 
 def register_tab():
     st.header("Register")
@@ -53,10 +36,6 @@ def login_tab():
     login_password = st.text_input("Password", type="password", key="login_password")
     if st.button("Login"):
         login_user(login_username, login_password)
-
-def google_sign_in_tab():
-    st.header("Google Sign-In")
-    google_sign_in()
 
 def register_user(username, email, password):
     if not username or not email or not password:
@@ -86,39 +65,6 @@ def login_user(username, password):
         st.rerun()
     else:
         st.error("Invalid username or password. Please try again.")
-
-def google_sign_in():
-    flow = Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-    flow.redirect_uri = redirect_uri
-
-    if 'code' not in st.query_params:
-        authorization_url, _ = flow.authorization_url(prompt="consent")
-        st.link_button("Login with Google", authorization_url)
-    else:
-        code = st.query_params['code']
-        flow.fetch_token(code=code)
-        credentials = flow.credentials
-        user_info_service = build('oauth2', 'v2', credentials=credentials)
-        user_info = user_info_service.userinfo().get().execute()
-
-        # Update or insert user in MongoDB
-        user_data = {
-            "email": user_info['email'],
-            "username": user_info['name'],
-            "picture": user_info['picture'],
-            "google_id": user_info['id']
-        }
-        users_collection.update_one(
-            {"email": user_info['email']},
-            {"$set": user_data},
-            upsert=True
-        )
-
-        # Add user to session state
-        user = users_collection.find_one({'username': user_info['name']})
-        st.session_state['user'] = user
-
-        st.rerun()
 
 @st.cache_data(ttl=600)
 def get_user(_user_id):

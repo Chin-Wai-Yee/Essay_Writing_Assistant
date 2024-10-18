@@ -15,7 +15,6 @@ from Data_Visualization import display_suggestion
 
 st.write("# Get Essay Suggestions 💡")
 
-@st.cache_data # for testing purposes, REMOVE BEFORE DEPLOYMENT!!!
 def get_essay_suggestions(essay, userinfo):
 
     client = get_openai_connection()
